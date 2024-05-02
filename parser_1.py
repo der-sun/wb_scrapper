@@ -2,7 +2,7 @@ import datetime
 import requests
 import pandas as pd
 from retry import retry
-
+import sqlite3
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
@@ -125,7 +125,7 @@ def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int
         # поиск введенной категории в общем каталоге
         category = search_category_in_catalog(url=url, catalog_list=catalog_data)
         data_list = []
-        for page in range(1, 11):  # вб отдает 50 страниц товара, беру 11
+        for page in range(1, 51):  # вб отдает 50 страниц товара, беру 11
             data = scrap_page(
                 page=page,
                 shard=category['shard'],
@@ -148,14 +148,21 @@ def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int
 
 
 if __name__ == '__main__':
-    url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
-    low_price = 1000  # нижний порог цены
-    top_price = 10000  # верхний порог цены
-    discount = 10  # скидка в %
-    start = datetime.datetime.now()  # запишем время старта
+    db = sqlite3.connect('WB_Catalogs.db')
+    # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
+    # low_price = 1000  # нижний порог цены
+    # top_price = 10000  # верхний порог цены
+    # discount = 10  # скидка в %
+    # start = datetime.datetime.now()  # запишем время старта
 
-    parser(url=url, low_price=low_price, top_price=top_price, discount=discount)
+    # parser(url=url, low_price=low_price, top_price=top_price, discount=discount)
 
-    end = datetime.datetime.now()  # запишем время завершения кода
-    total = end - start  # расчитаем время затраченное на выполнение кода
-    print("Затраченное время:" + str(total))
+    # end = datetime.datetime.now()  # запишем время завершения кода
+    # total = end - start  # расчитаем время затраченное на выполнение кода
+    # print("Затраченное время:" + str(total))
+#     c = db.cursor()
+#     c.execute("""CREATE TABLE Catalogs(
+#               id BIGINT NOT NULL PRIMARY key,
+#               name VARCHAR(64) NOT NULL)
+# """)
+    db.close()
