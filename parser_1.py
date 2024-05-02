@@ -30,12 +30,11 @@ def get_catalogs_wb() -> dict:
 def get_data_category(catalogs_wb: dict) -> list:
     """сбор данных категорий из каталога Wildberries"""
     catalog_data = []
-    if isinstance(catalogs_wb, dict) and 'childs' not in catalogs_wb:
+    if isinstance(catalogs_wb, dict):
         catalog_data.append({
+            'id': catalogs_wb['id'],
             'name': f"{catalogs_wb['name']}",
-            'shard': catalogs_wb.get('shard', None),
-            'url': catalogs_wb['url'],
-            'query': catalogs_wb.get('query', None)
+            'url': catalogs_wb['url']
         })
     elif isinstance(catalogs_wb, dict):
         catalog_data.extend(get_data_category(catalogs_wb['childs']))
@@ -45,7 +44,7 @@ def get_data_category(catalogs_wb: dict) -> list:
     return catalog_data
 
 
-def search_category_in_catalog(url: str, catalog_list: list) -> dict:
+#def search_category_in_catalog(url: str, catalog_list: list) -> dict:
     """проверка пользовательской ссылки на наличии в каталоге"""
     for catalog in catalog_list:
         if catalog['url'] == url.split('https://www.wildberries.ru')[-1]:
@@ -53,7 +52,7 @@ def search_category_in_catalog(url: str, catalog_list: list) -> dict:
             return catalog
 
 
-def get_data_from_json(json_file: dict) -> list:
+# def get_data_from_json(json_file: dict) -> list:
     """извлекаем из json данные"""
     data_list = []
     for data in json_file['data']['products']:
@@ -76,8 +75,8 @@ def get_data_from_json(json_file: dict) -> list:
     return data_list
 
 
-@retry(Exception, tries=-1, delay=0)
-def scrap_page(page: int, shard: str, query: str, low_price: int, top_price: int, discount: int = None) -> dict:
+# @retry(Exception, tries=-1, delay=0)
+# def scrap_page(page: int, shard: str, query: str, low_price: int, top_price: int, discount: int = None) -> dict:
     """Сбор данных со страниц"""
     url = f'https://catalog.wb.ru/catalog/{shard}/catalog?appType=1&curr=rub' \
           f'&dest=-1257786' \
@@ -93,7 +92,7 @@ def scrap_page(page: int, shard: str, query: str, low_price: int, top_price: int
     return r.json()
 
 
-def save_excel(data: list, filename: str):
+# def save_excel(data: list, filename: str):
     """сохранение результата в excel файл"""
     df = pd.DataFrame(data)
     writer = pd.ExcelWriter(f'{filename}.xlsx')
@@ -117,7 +116,7 @@ def save_excel(data: list, filename: str):
     print(f'Все сохранено в {filename}.xlsx\n')
 
 
-def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int = 0):
+# def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int = 0):
     """основная функция"""
     # получаем данные по заданному каталогу
     catalog_data = get_data_category(get_catalogs_wb())
@@ -148,7 +147,12 @@ def parser(url: str, low_price: int = 1, top_price: int = 1000000, discount: int
 
 
 if __name__ == '__main__':
-    db = sqlite3.connect('WB_Catalogs.db')
+     catalog_data = get_data_category(get_catalogs_wb())
+     for i in range(len(catalog_data)):
+         print(catalog_data[i])
+         i+=1
+    
+#    db = sqlite3.connect('WB_Catalogs.db')
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
     # top_price = 10000  # верхний порог цены
@@ -161,8 +165,6 @@ if __name__ == '__main__':
     # total = end - start  # расчитаем время затраченное на выполнение кода
     # print("Затраченное время:" + str(total))
 #     c = db.cursor()
-#     c.execute("""CREATE TABLE Catalogs(
-#               id BIGINT NOT NULL PRIMARY key,
-#               name VARCHAR(64) NOT NULL)
+#     c.execute("""ALTER TABLE Catalogs ADD COLUMN URL VARCHAR(128) NOT NULL
 # """)
-    db.close()
+#    db.close()
