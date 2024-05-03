@@ -34,7 +34,7 @@ def get_data_category(catalogs_wb: dict) -> list:
         catalog_data.append({
             'id': catalogs_wb['id'],
             'name': f"{catalogs_wb['name']}",
-            'url': catalogs_wb['url']
+            'URL': catalogs_wb['url']
         })
     elif isinstance(catalogs_wb, dict):
         catalog_data.extend(get_data_category(catalogs_wb['childs']))
@@ -147,18 +147,15 @@ def get_data_category(catalogs_wb: dict) -> list:
 
 
 if __name__ == '__main__':
-    i=0
+    db = sqlite3.connect('WB_Catalogs.db')
+    c = db.cursor()
     cnt=0
     catalog_data = get_data_category(get_catalogs_wb())
-    while(cnt in range(len(catalog_data))):
-        for i in catalog_data[cnt]:
-            print(catalog_data[cnt][i])
+    #c.execute("DELETE FROM Catalogs")
+    for cnt in range(len(catalog_data)):
+        query = "INSERT OR REPLACE INTO Catalogs " + str(tuple(catalog_data[cnt].keys())) + " VALUES " + str(tuple(catalog_data[cnt].values())) + ";"
+        c.execute(query)
         cnt+=1
-
-    #  for i in catalog_data:
-    #     print(catalog_data[i(0)])
-    
-#    db = sqlite3.connect('WB_Catalogs.db')
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
     # top_price = 10000  # верхний порог цены
@@ -170,7 +167,5 @@ if __name__ == '__main__':
     # end = datetime.datetime.now()  # запишем время завершения кода
     # total = end - start  # расчитаем время затраченное на выполнение кода
     # print("Затраченное время:" + str(total))
-#     c = db.cursor()
-#     c.execute("""ALTER TABLE Catalogs ADD COLUMN URL VARCHAR(128) NOT NULL
-# """)
-#    db.close()
+    db.commit()
+    db.close()
