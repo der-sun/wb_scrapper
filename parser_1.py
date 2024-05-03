@@ -147,10 +147,16 @@ def get_data_category(catalogs_wb: dict) -> list:
 
 
 if __name__ == '__main__':
-     catalog_data = get_data_category(get_catalogs_wb())
-     for i in range(len(catalog_data)):
-         print(catalog_data[i])
-         i+=1
+    i=0
+    cnt=0
+    catalog_data = get_data_category(get_catalogs_wb())
+    while(cnt in range(len(catalog_data))):
+        for i in catalog_data[cnt]:
+            print(catalog_data[cnt][i])
+        cnt+=1
+
+    #  for i in catalog_data:
+    #     print(catalog_data[i(0)])
     
 #    db = sqlite3.connect('WB_Catalogs.db')
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
