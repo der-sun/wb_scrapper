@@ -145,33 +145,41 @@ def get_data_category(catalogs_wb: dict) -> list:
     except PermissionError:
         print('Ошибка! Вы забыли закрыть созданный ранее excel файл. Закройте и повторите попытку')
 
-
-def choose(catalog_len):
-    db = sqlite3.connect('WB_Catalogs.db')
-    c = db.cursor()
-    for i in range(catalog_len):
-        query = "SELECT name FROM Catalogs WHERE ROWID = " + str(i+1)
+#вывод данных из бд 
+def choose(length,c,db_name):
+    for i in range(length):
+        query = "SELECT name FROM "+db_name+" WHERE ROWID = " + str(i+1)
         c.execute(query)
-        for name in c.fetchone(): #fetch(one/all/many) возращает нам список с кортежами
-            print(str(i+1)+". "f"{name}") #выписываем через форматированную строку переменную, что взяли в цикле у fetchone
+        for var_name in c.fetchone(): #fetch(one/all/many) возращает нам список с кортежами
+            print(str(i+1)+". "f"{var_name}") #выписываем через форматированную строку переменную, что взяли в цикле у fetchone
         i+=1
-    db.close()
+    db.commit()
+
+#запись данных в бд
+def insert_into_db(db, c, db_name):
+    db_clear(db, c, db_name)
+    cnt=0
+    catalog_data = get_data_category(get_catalogs_wb())
+    for cnt in range(len(catalog_data)):
+        query = "INSERT OR REPLACE INTO " + str(db_name) + " " + str(tuple(catalog_data[cnt].keys())) + " VALUES " + str(tuple(catalog_data[cnt].values())) + ";"
+        c.execute(query)
+        db.commit()
+        cnt+=1
+    choose(len(catalog_data),c,db_name)
+
+#очистка бд
+def db_clear(db, c, db_name):
+    query = "DELETE FROM " + db_name
+    c.execute(query)
+    db.commit()
 
 
 if __name__ == '__main__':
     db = sqlite3.connect('WB_Catalogs.db')
     c = db.cursor()
-    c.execute("DELETE FROM Catalogs")
-    db.commit()
-    cnt=0
-    catalog_data = get_data_category(get_catalogs_wb())
-    for cnt in range(len(catalog_data)):
-        query = "INSERT OR REPLACE INTO Catalogs " + str(tuple(catalog_data[cnt].keys())) + " VALUES " + str(tuple(catalog_data[cnt].values())) + ";"
-        c.execute(query)
-        cnt+=1
-    db.commit()
+    db_name = "Catalogs"
+    insert_into_db(db, c, db_name)
     db.close()
-    choose(len(catalog_data))
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
     # top_price = 10000  # верхний порог цены
