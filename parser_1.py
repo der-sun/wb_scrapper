@@ -146,16 +146,32 @@ def get_data_category(catalogs_wb: dict) -> list:
         print('Ошибка! Вы забыли закрыть созданный ранее excel файл. Закройте и повторите попытку')
 
 
+def choose(catalog_len):
+    db = sqlite3.connect('WB_Catalogs.db')
+    c = db.cursor()
+    for i in range(catalog_len):
+        query = "SELECT name FROM Catalogs WHERE ROWID = " + str(i+1)
+        c.execute(query)
+        for name in c.fetchone(): #fetch(one/all/many) возращает нам список с кортежами
+            print(str(i+1)+". "f"{name}") #выписываем через форматированную строку переменную, что взяли в цикле у fetchone
+        i+=1
+    db.close()
+
+
 if __name__ == '__main__':
     db = sqlite3.connect('WB_Catalogs.db')
     c = db.cursor()
+    c.execute("DELETE FROM Catalogs")
+    db.commit()
     cnt=0
     catalog_data = get_data_category(get_catalogs_wb())
-    #c.execute("DELETE FROM Catalogs")
     for cnt in range(len(catalog_data)):
         query = "INSERT OR REPLACE INTO Catalogs " + str(tuple(catalog_data[cnt].keys())) + " VALUES " + str(tuple(catalog_data[cnt].values())) + ";"
         c.execute(query)
         cnt+=1
+    db.commit()
+    db.close()
+    choose(len(catalog_data))
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
     # top_price = 10000  # верхний порог цены
@@ -167,5 +183,3 @@ if __name__ == '__main__':
     # end = datetime.datetime.now()  # запишем время завершения кода
     # total = end - start  # расчитаем время затраченное на выполнение кода
     # print("Затраченное время:" + str(total))
-    db.commit()
-    db.close()
