@@ -157,28 +157,43 @@ def choose(length,c,db_name):
 
 #запись данных в бд
 def insert_into_db(db, c, db_name):
-    db_clear(db, c, db_name)
-    cnt=0
     catalog_data = get_data_category(get_catalogs_wb())
-    for cnt in range(len(catalog_data)):
-        query = "INSERT OR REPLACE INTO " + str(db_name) + " " + str(tuple(catalog_data[cnt].keys())) + " VALUES " + str(tuple(catalog_data[cnt].values())) + ";"
+    for i in range(len(catalog_data)):
+        query = "INSERT OR REPLACE INTO " + str(db_name) + " " + str(tuple(catalog_data[i].keys())) + " VALUES " + str(tuple(catalog_data[i].values())) + ";"
         c.execute(query)
         db.commit()
-        cnt+=1
+        i+=1
     choose(len(catalog_data),c,db_name)
 
-#очистка бд
-def db_clear(db, c, db_name):
-    query = "DELETE FROM " + db_name
-    c.execute(query)
+#очистка всех таблиц
+def db_clear(db, c):
+    i=0
+    c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+    for everyone_table in c.fetchall():
+        c.execute("DROP TABLE Catalog" + str(i))
+        i+=1
+        db.commit()
+
+#создание бд
+def db_create(c):
+    i=0
+    c.execute("SELECT * FROM sqlite_master WHERE type='table';")
+    for name_current_database in c.fetchall():
+        i+=1
+    db_name="Catalog"+str(i)
+    c.execute("CREATE TABLE "+str(db_name)+" ( id BIGINT NOT NULL PRIMARY key, name VARCHAR(64) NOT NULL, URL VARCHAR(128) NOT NULL)")
     db.commit()
+    return db_name
 
 
 if __name__ == '__main__':
     db = sqlite3.connect('WB_Catalogs.db')
     c = db.cursor()
-    db_name = "Catalogs"
-    insert_into_db(db, c, db_name)
+    db_clear(db,c)
+    print("Выберите категорию из списка:")
+    insert_into_db(db, c, db_name=db_create(c))
+    row_id = input()
+    #insert_into_db(db, c, db_name=db_create(c))
     db.close()
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
@@ -191,3 +206,6 @@ if __name__ == '__main__':
     # end = datetime.datetime.now()  # запишем время завершения кода
     # total = end - start  # расчитаем время затраченное на выполнение кода
     # print("Затраченное время:" + str(total))
+    #c = db.cursor()
+#   
+
