@@ -230,15 +230,8 @@ def db_clear(db, c):
 #создание бд
 def db_create(c):
     global db_cnt
-    i=0
-    c.execute("SELECT * FROM sqlite_master WHERE type='table';")
-    for name_current_database in c.fetchall():
-        i+=1
-    db_name="Catalog"+str(i)
-    if (i==0):
-        c.execute("CREATE TABLE "+str(db_name)+" (id BIGINT NOT NULL PRIMARY KEY, name VARCHAR(64) NOT NULL, URL VARCHAR(128) NOT NULL, childs BOOLEAN DEFAULT FALSE)")
-    else:
-        c.execute("CREATE TABLE "+str(db_name)+" (id BIGINT NOT NULL PRIMARY KEY, name VARCHAR(64) NOT NULL, URL VARCHAR(128) NOT NULL, parent BIGINT NULL, childs BOOLEAN DEFAULT FALSE, CONSTRAINT parent_" + str(i)+"_fk FOREIGN KEY (parent) REFERENCES Catalog"+str(i-1)+"( id))")
+    db_name="Catalog"+str(db_cnt)
+    c.execute("CREATE TABLE "+str(db_name)+" (id BIGINT NOT NULL PRIMARY KEY, name VARCHAR(64) NOT NULL, URL VARCHAR(128) NOT NULL, childs BOOLEAN DEFAULT FALSE)")
     db.commit()
     db_cnt+=1
     return db_name
@@ -250,16 +243,16 @@ if __name__ == '__main__':
     db_clear(db,c)
     print("Выберите категорию из списка:")
     parent_id = 0
-    child = True
+    checker = True
     insert_into_db(db, c, parent_id, db_name=db_create(c))
-    while (child==True):
+    while (checker == True):
         parent_id=int(input())
         c.execute("SELECT childs FROM Catalog"+str(db_cnt-1)+" WHERE ROWID = " +str(parent_id)+ ";")
         for childs in c.fetchone():
-            child = childs
-            if (child == False):
-                break
-        insert_into_db(db, c, parent_id, db_name=db_create(c))
+            if (childs != 0):
+                insert_into_db(db, c, parent_id, db_name=db_create(c))
+            else:
+                checker = False
     db.close()
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
