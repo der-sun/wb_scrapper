@@ -4,8 +4,8 @@ import pandas as pd
 from retry import retry
 import sqlite3
 
-intodeep=True
-catalogs_wb_1 = []
+db_cnt=0
+get_list=[]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
@@ -28,7 +28,6 @@ CATALOG_URL = 'https://static-basket-01.wbbasket.ru/vol0/data/main-menu-ru-ru-v2
 def get_catalogs_wb() -> dict:
     """получаем полный каталог Wildberries"""
     return requests.get(CATALOG_URL, headers=HEADERS).json()
-    
 
 
 def get_data_category(catalogs_wb: dict) -> list:
@@ -50,27 +49,43 @@ def get_data_category(catalogs_wb: dict) -> list:
     return catalog_data
 
 
-def get_child_categories(catalogs_wb: dict, target_id: int) -> list:
-    """Получение дочерних каталогов для каталога с заданным ID"""
-    global intodeep
-    global catalogs_wb_1
-    child_catalogs = []
-    if isinstance(catalogs_wb, dict):
-            has_children = False
-            print(catalogs_wb['id'])
-            if (intodeep == True):
-                if (catalogs_wb['id'] == target_id):
-                    intodeep = False
-                    child_catalogs = get_data_category(catalogs_wb['childs'])
-                    return child_catalogs
-    elif isinstance(catalogs_wb, list):
-        for child in catalogs_wb:
-            child_catalogs.extend(get_child_categories(child, target_id))
-            if (intodeep == False):
-                break
-    return child_catalogs
+def get_catalog_by_id(id: int, catalogs_list: list) -> dict:
+    """Выводит информацию о каталоге с заданным id и все содержащиеся в нем каталоги"""
+    result_catalog = []  # Переменная для хранения данных каталога
+    catalog_with_id = []  # Переменная для хранения каталога с заданным id
+    i=0
 
+    # Функция для рекурсивного поиска каталога с заданным id и его содержимого
+    def search_catalog_by_id(catalogs, target_id):
+        nonlocal result_catalog, catalog_with_id, i
+        
+        for catalog in catalogs:
+            try:
+                if catalog['id'] == target_id and catalog['id']:
+                    # Проверяем наличие дочерних каталогов
+                    catalog_with_id.extend(catalogs[i]['childs']) # Сохраняем каталог с заданным id
+                    for child in catalog['childs']:
+                        has_children = False  # Флаг наличия дочерних каталогов
+                        if 'childs' in child:  # Проверяем наличие ключа 'childs' в словаре subchild
+                                has_children = True
 
+                            # Сохраняем данные каталога в переменную result_catalog
+                        result_catalog.append({
+                        'id': child['id'],
+                        'name': f"{child['name']}",
+                        'URL': child['url'],
+                        'childs': has_children  # Добавляем флаг наличия дочерних каталогов
+                            })
+                    break
+                i+=1
+            except KeyError:
+                pass  # Продолжаем выполнение, если возникла ошибка KeyError
+
+    # Вызываем функцию для поиска каталога с заданным id
+    search_catalog_by_id(catalogs_list, id)
+
+    # Возвращаем данные каталога и его содержимого, а также каталог с заданным id
+    return result_catalog, catalog_with_id
 
 # def search_category_in_catalog(url: str, catalog_list: list) -> dict:
 #     """проверка пользовательской ссылки на наличии в каталоге"""
@@ -184,19 +199,17 @@ def choose(length,c,db_name):
     db.commit()
 
 #запись данных в бд
-def insert_into_db(db, c, db_name):
-    db_counter = 0
+def insert_into_db(db, c,input, db_name):
+    global get_list
+    global db_cnt
 
-    c.execute("SELECT * FROM sqlite_master WHERE type='table';")
-    for name_current_database in c.fetchall():
-        db_counter+=1
-
-    if (db_counter!=1):
-        c.execute("SELECT id FROM Catalog"+str(db_counter-2)+" WHERE ROWID="+str(int(input()))+";")
+    if (db_cnt!=1):
+        c.execute("SELECT id FROM Catalog"+str(db_cnt-2)+" WHERE ROWID="+str(input)+";")
         for row_id in c.fetchone():
-            catalog_data = get_child_categories(get_catalogs_wb(),row_id)
-    else:
-        catalog_data = get_data_category(get_catalogs_wb())
+            catalog_data, get_list = get_catalog_by_id(row_id,get_list)
+    elif(db_cnt==1):
+        get_list=get_catalogs_wb()
+        catalog_data = get_data_category(get_list)
         
     for i in range(len(catalog_data)):
         query = "INSERT OR REPLACE INTO " + str(db_name) + " " + str(tuple(catalog_data[i].keys())) + " VALUES " + str(tuple(catalog_data[i].values())) + ";"
@@ -216,6 +229,7 @@ def db_clear(db, c):
 
 #создание бд
 def db_create(c):
+    global db_cnt
     i=0
     c.execute("SELECT * FROM sqlite_master WHERE type='table';")
     for name_current_database in c.fetchall():
@@ -226,6 +240,7 @@ def db_create(c):
     else:
         c.execute("CREATE TABLE "+str(db_name)+" (id BIGINT NOT NULL PRIMARY KEY, name VARCHAR(64) NOT NULL, URL VARCHAR(128) NOT NULL, parent BIGINT NULL, childs BOOLEAN DEFAULT FALSE, CONSTRAINT parent_" + str(i)+"_fk FOREIGN KEY (parent) REFERENCES Catalog"+str(i-1)+"( id))")
     db.commit()
+    db_cnt+=1
     return db_name
 
 
@@ -234,12 +249,18 @@ if __name__ == '__main__':
     c = db.cursor()
     db_clear(db,c)
     print("Выберите категорию из списка:")
-    insert_into_db(db, c, db_name=db_create(c))
-    insert_into_db(db, c, db_name=db_create(c))
+    parent_id = 0
+    child = True
+    insert_into_db(db, c, parent_id, db_name=db_create(c))
+    while (child==True):
+        parent_id=int(input())
+        c.execute("SELECT childs FROM Catalog"+str(db_cnt-1)+" WHERE ROWID = " +str(parent_id)+ ";")
+        for childs in c.fetchone():
+            child = childs
+            if (child == False):
+                break
+        insert_into_db(db, c, parent_id, db_name=db_create(c))
     db.close()
-    #end = datetime.datetime.now()  # запишем время завершения кода
-    #total = end - start  # расчитаем время затраченное на выполнение кода
-    #print("Затраченное время:" + str(total))
     # url = 'https://www.wildberries.ru/catalog/dlya-doma/mebel/kronshteiny'  # сюда вставляем вашу ссылку на категорию
     # low_price = 1000  # нижний порог цены
     # top_price = 10000  # верхний порог цены
